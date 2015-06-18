@@ -1,0 +1,81 @@
+---
+- hosts: all
+  tasks:
+    - name: ensure ntpd is at the latest version
+      apt: pkg=ntp state=latest
+      notify:
+        - restart ntpd
+      sudo: yes
+    - name: Ensure required dependencies are installed
+      apt: pkg={{ item }} state=present
+      with_items:
+          - git-core
+          - g++
+          - libbz2-dev
+          - liblzma-dev
+          - libcrypto++-dev
+          - libpqxx3-dev
+          - scons
+          - libicu-dev
+          - strace
+          - emacs
+          - ccache
+          - make
+          - gdb
+          - time
+          - automake
+          - libtool
+          - autoconf
+          - bash-completion
+          - google-perftools
+          - libgoogle-perftools-dev
+          - valgrind
+          - libace-dev
+          - gfortran
+          - linux-tools
+          - uuid-dev
+          - liblapack-dev
+          - libblas-dev
+          - libevent-dev
+          - flex
+          - bison
+          - pkg-config
+          - python-dev
+          - python-numpy
+          - python-numpy-dev
+          - python-matplotlib
+          - libcppunit-dev
+          - python-setuptools
+          - ant
+          - openjdk-7-jdk
+          - doxygen
+          - libfreetype6-dev
+          - libpng-dev
+          - python-tk
+          - tk-dev
+          - python-virtualenv
+          - sshfs
+          - rake
+          - ipmitool
+          - mm-common
+          - libsigc++-2.0-dev
+          - libcairo2-dev
+          - libcairomm-1.0-dev
+          - cmake
+      sudo: yes
+    - name: Remove system packages that are known to cause problems with platform deps
+      apt: name={{ item }} state=absent purge=yes
+      with_items:
+          - libcurl4-openssl-dev
+      sudo: yes
+    - file: path=~/local/bin state=directory
+    - file: path=~/local/lib state=directory
+    - copy: src=profile dest=~/.profile
+    - git: repo=https://github.com/datacratic/platform-deps.git dest=~/platform-deps accept_hostkey=yes
+    - command: nice make all JOBS=1 chdir=~/platform-deps creates=~/platform-deps/build
+    - git: repo=https://github.com/rtbkit/rtbkit.git dest=~/rtbkit accept_hostkey=yes
+    - command: make dependencies chdir=~/rtbkit creates=~/rtbkit/build
+    - command: make compile chdir=~/rtbkit creates=~/rtbkit/build
+  handlers:
+    - name: restart ntpd
+      service: name=ntpd state=restarted
